@@ -48,7 +48,7 @@ class Logger:
 
 def startServer():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    #sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((ip, port))
     sock.listen(maxQueue)
 
@@ -60,6 +60,13 @@ def startServer():
                 receivedData = newSocket.recv(1024)
                 if not receivedData:
                     break
+                print(receivedData)
+                filename = receivedData.split()[1].decode()
+                f = open(filename[1:])
+                outputdata = f.read()
+                f.close()
+                newSocket.send(response10)
+                print(outputdata)
                 newSocket.send(receivedData)
             newSocket.close()
             print("Disconnected from", address)
