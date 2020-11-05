@@ -39,7 +39,7 @@ class Logger:
         while self.logging:
             if not len(self.loggingQueue) == 0:
                 msg = self.loggingQueue.pop()
-                print(msg, file=sys.stderr)
+                print(msg.message, file=sys.stderr)
 
     def stop(self):
         self.logging = False
@@ -61,13 +61,12 @@ def startServer():
                 if not receivedData:
                     break
                 print(receivedData)
-                filename = receivedData.split()[1].decode()
+                filename = receivedData.split()[1].decode("utf-8")
                 f = open(filename[1:])
                 outputdata = f.read()
                 f.close()
-                newSocket.send(response10)
-                print(outputdata)
-                newSocket.send(receivedData)
+                newSocket.send(outputdata.encode())
+                newSocket.send(response10.encode())
             newSocket.close()
             print("Disconnected from", address)
     finally:
