@@ -65,8 +65,9 @@ def startServer():
                 f = open(filename[1:])
                 outputdata = f.read()
                 f.close()
-                newSocket.send(outputdata.encode())
                 newSocket.send(response10.encode())
+                newSocket.send(outputdata.encode())
+                break
             newSocket.close()
             print("Disconnected from", address)
     finally:
