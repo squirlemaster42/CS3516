@@ -9,6 +9,8 @@ response11 = 'HTTP/1.1 200 OK\r\n\r\n'
 ip = "localhost"
 port = 8080
 maxQueue = 5
+maxConnections = 10
+connectedClients = 0
 
 
 class Message:
@@ -49,7 +51,15 @@ class Logger:
 
 # TODO Change messages to use logger
 # TODO Check number of connected clients
-def handleConenction(client, address):
+def handleConenction(client, address, lock):
+    lock.aquire()
+    connectedClients++
+    lock.release()
+    if(connectedClients > maxConnections):
+        client.close()
+        return
+    # TODO Figure out what to do if there are too many clients
+    # We just disconnect the client
     receivedData = client.recv(1024)
     if not receivedData:
         return  # Handle Error Better
@@ -62,6 +72,10 @@ def handleConenction(client, address):
     client.send(outputdata.encode())
     # Send disconnect message
     client.close()
+    lock.aquire()
+    connectedClients--
+    lock.release()
+    print("Disconnected from", address)
 
 
 def startServer():
@@ -69,12 +83,13 @@ def startServer():
     # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((ip, port))
     sock.listen(maxQueue)
+    lock = threading.Lock()
 
     try:
         while 1:
             newSocket, address = sock.accept()
             print("Connection from", address)
-            thread = threading.Thread(target=handleConenction, args=[newSocket, address])
+            thread = threading.Thread(target=handleConenction, args=[newSocket, address], lock)
             thread.start()
     finally:
         sock.close()
