@@ -39,7 +39,7 @@ class Logger:
         while self.logging:
             if not len(self.loggingQueue) == 0:
                 msg = self.loggingQueue.pop()
-                #Need to change message to include timestamp
+                # Need to change message to include timestamp
                 print(msg.message, file=sys.stderr)
 
     def stop(self):
@@ -47,9 +47,26 @@ class Logger:
         self.thread.join()
 
 
+# TODO Change messages to use logger
+# TODO Check number of connected clients
+def handleConenction(client, address):
+    receivedData = client.recv(1024)
+    if not receivedData:
+        return  # Handle Error Better
+    print(receivedData)
+    filename = receivedData.split()[1].decode("utf-8")
+    f = open(filename[1:])
+    outputdata = f.read()
+    f.close()
+    client.send(response10.encode())
+    client.send(outputdata.encode())
+    # Send disconnect message
+    client.close()
+
+
 def startServer():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((ip, port))
     sock.listen(maxQueue)
 
@@ -57,20 +74,8 @@ def startServer():
         while 1:
             newSocket, address = sock.accept()
             print("Connection from", address)
-            while 1:  # Make Thread
-                receivedData = newSocket.recv(1024)
-                if not receivedData:
-                    break
-                print(receivedData)
-                filename = receivedData.split()[1].decode("utf-8")
-                f = open(filename[1:])
-                outputdata = f.read()
-                f.close()
-                newSocket.send(response10.encode())
-                newSocket.send(outputdata.encode())
-                break #This is ugly but should be fixed when we more to threads
-            newSocket.close()
-            print("Disconnected from", address)
+            thread = threading.Thread(target=handleConenction, args=[newSocket, address])
+            thread.start()
     finally:
         sock.close()
 
