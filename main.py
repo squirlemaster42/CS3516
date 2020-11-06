@@ -39,6 +39,7 @@ class Logger:
         while self.logging:
             if not len(self.loggingQueue) == 0:
                 msg = self.loggingQueue.pop()
+                #Need to change message to include timestamp
                 print(msg.message, file=sys.stderr)
 
     def stop(self):
@@ -67,7 +68,7 @@ def startServer():
                 f.close()
                 newSocket.send(response10.encode())
                 newSocket.send(outputdata.encode())
-                break
+                break #This is ugly but should be fixed when we more to threads
             newSocket.close()
             print("Disconnected from", address)
     finally:
