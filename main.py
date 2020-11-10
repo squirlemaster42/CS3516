@@ -11,6 +11,7 @@ port = 8080
 maxQueue = 5
 maxConnections = 10
 connectedClients = 0
+timeout = 10
 
 
 class Message:
@@ -25,26 +26,23 @@ class Logger:
     logging = False
 
     def __init__(self):
-        print("--------Starting Logger--------")
         self.thread = threading.Thread(target=self.logWorker)
         self.logging = True
         self.thread.start()
 
     def logMessage(self, message):
-        print("Got message")
         with self.logLock:
             if len(self.loggingQueue) == 0:
-                print("Message Added")
                 self.loggingQueue.append(message)
                 return
             for i in range(len(self.loggingQueue)):
                 if message.time < self.loggingQueue[i]:
-                    print("Message Added")
                     self.loggingQueue.insert(i, message)
                     break
 
     def logWorker(self):
-        print("Starting thread")
+        t = time.time()
+        self.logMessage(Message(t, "--------Starting Logger--------"))
         while self.logging:
             if not len(self.loggingQueue) == 0:
                 msg = self.loggingQueue.pop()
@@ -82,7 +80,15 @@ def handleConenction(client, address, lock):
         connectedClients -= 1
         lock.release()
         return
-    f = open(filename[1:])
+    try:
+        f = open(filename[1:])
+    except FileNotFoundError:
+        client.send(errmsg.encode())
+        client.close()
+        lock.acquire()
+        connectedClients -= 1
+        lock.release()
+        return
     outputdata = f.read()
     f.close()
     client.send(response10.encode())
@@ -92,7 +98,7 @@ def handleConenction(client, address, lock):
     lock.acquire()
     connectedClients -= 1
     lock.release()
-    print("Disconnected from", address)
+    logger.logMessage(Message(time.time(), "Disconnected from " + str(address)))
 
 
 def startServer():
@@ -104,7 +110,7 @@ def startServer():
     try:
         while 1:
             newSocket, address = sock.accept()
-            print("Connection from", address)
+            logger.logMessage(Message(time.time(), "Connection from " + str(address)))
             thread = threading.Thread(target=handleConenction, args=[newSocket, address, lock])
             thread.start()
     finally:
@@ -112,8 +118,25 @@ def startServer():
 
 
 if __name__ == '__main__':
-    print("-------- Starting Server --------")
+    # Check args
+    arguments = len(sys.argv)
+
+    for i in range(1, arguments, 2):
+        arg = sys.argv[i]
+        if "--port" in arg:
+            print("Found Port")
+            port = int(sys.argv[i + 1])
+            print(port)
+        elif "--maxrq" in arg:
+            print("Found MaxRQ")
+            maxConnections = int(sys.argv[i + 1])
+            print(maxConnections)
+        elif "--timeout" in arg:
+            print("Found Timeout")
+            timeout = int(sys.argv[i + 1])
+            print(timeout)
+
     logger = Logger()
     t = time.time()
-    logger.logMessage(Message(t, "Started Server"))
+    logger.logMessage(Message(t, "-------- Started Server --------"))
     startServer()
