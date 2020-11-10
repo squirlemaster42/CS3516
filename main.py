@@ -31,9 +31,14 @@ class Logger:
         self.logging = True
 
     def logMessage(self, message):
+        print("Got message")
         with self.logLock:
+            if(len(self.logginQueue) == 0):
+                self.loggingQueue.append(message)
+                return
             for i in range(len(self.loggingQueue)):
                 if message.time < self.loggingQueue[i]:
+                    print("Message Added")
                     self.loggingQueue.insert(i, message)
                     break
 
@@ -109,3 +114,4 @@ if __name__ == '__main__':
     print("-------- Starting Server --------")
     logger = Logger()
     startServer()
+    logger.logMessage(Message(time.localtime(), "Started Server"))
