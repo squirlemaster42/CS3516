@@ -14,8 +14,8 @@ connectedClients = 0
 
 
 class Message:
-    def __init__(self, time, message):
-        self.time = time
+    def __init__(self, curTime, message):
+        self.curTime = curTime
         self.message = message
 
 
@@ -27,13 +27,14 @@ class Logger:
     def __init__(self):
         print("--------Starting Logger--------")
         self.thread = threading.Thread(target=self.logWorker)
-        self.thread.start()
         self.logging = True
+        self.thread.start()
 
     def logMessage(self, message):
         print("Got message")
         with self.logLock:
-            if(len(self.logginQueue) == 0):
+            if len(self.loggingQueue) == 0:
+                print("Message Added")
                 self.loggingQueue.append(message)
                 return
             for i in range(len(self.loggingQueue)):
@@ -43,11 +44,12 @@ class Logger:
                     break
 
     def logWorker(self):
+        print("Starting thread")
         while self.logging:
             if not len(self.loggingQueue) == 0:
                 msg = self.loggingQueue.pop()
                 # Need to change message to include timestamp
-                timeStr = time.strftime('[%Y-%m-%d %H:%M:%S]', time.localtime(msg.time))
+                timeStr = time.strftime('[%Y-%m-%d %H:%M:%S]', time.localtime(msg.curTime))
                 print(timeStr, msg.message, file=sys.stderr)
 
     def stop(self):
@@ -61,7 +63,7 @@ def handleConenction(client, address, lock):
     global connectedClients
     connectedClients += 1
     lock.release()
-    if(connectedClients > maxConnections):
+    if connectedClients > maxConnections:
         client.close()
         return
     receivedData = client.recv(1024)
@@ -95,7 +97,6 @@ def handleConenction(client, address, lock):
 
 def startServer():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((ip, port))
     sock.listen(maxQueue)
     lock = threading.Lock()
@@ -113,5 +114,6 @@ def startServer():
 if __name__ == '__main__':
     print("-------- Starting Server --------")
     logger = Logger()
+    t = time.time()
+    logger.logMessage(Message(t, "Started Server"))
     startServer()
-    logger.logMessage(Message(time.localtime(), "Started Server"))
