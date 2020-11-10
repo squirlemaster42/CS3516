@@ -42,7 +42,8 @@ class Logger:
             if not len(self.loggingQueue) == 0:
                 msg = self.loggingQueue.pop()
                 # Need to change message to include timestamp
-                print(msg.message, file=sys.stderr)
+                timeStr = time.strftime('[%Y-%m-%d %H:%M:%S]', time.localtime(msg.time))
+                print(timeStr, msg.message, file=sys.stderr)
 
     def stop(self):
         self.logging = False
@@ -50,21 +51,30 @@ class Logger:
 
 
 # TODO Change messages to use logger
-# TODO Check number of connected clients
 def handleConenction(client, address, lock):
-    lock.aquire()
-    connectedClients++
+    lock.acquire()
+    global connectedClients
+    connectedClients += 1
     lock.release()
     if(connectedClients > maxConnections):
         client.close()
         return
-    # TODO Figure out what to do if there are too many clients
-    # We just disconnect the client
     receivedData = client.recv(1024)
     if not receivedData:
         return  # Handle Error Better
-    print(receivedData)
+    splitRec = receivedData.split(b'\r\n')
+    for d in splitRec:
+        if b'X-additional-wait:' in d:
+            waitTime = int(d.split(b' ')[1])
+            time.sleep(waitTime)
     filename = receivedData.split()[1].decode("utf-8")
+    if ".." in filename or filename.count("/") > 1:
+        client.send(errmsg.encode())
+        client.close()
+        lock.acquire()
+        connectedClients -= 1
+        lock.release()
+        return
     f = open(filename[1:])
     outputdata = f.read()
     f.close()
@@ -72,8 +82,8 @@ def handleConenction(client, address, lock):
     client.send(outputdata.encode())
     # Send disconnect message
     client.close()
-    lock.aquire()
-    connectedClients--
+    lock.acquire()
+    connectedClients -= 1
     lock.release()
     print("Disconnected from", address)
 
@@ -89,7 +99,7 @@ def startServer():
         while 1:
             newSocket, address = sock.accept()
             print("Connection from", address)
-            thread = threading.Thread(target=handleConenction, args=[newSocket, address], lock)
+            thread = threading.Thread(target=handleConenction, args=[newSocket, address, lock])
             thread.start()
     finally:
         sock.close()
