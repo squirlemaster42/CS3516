@@ -63,15 +63,25 @@ def handleConenction(client, address, lock):
     lock.release()
     if connectedClients > maxConnections:
         client.close()
+        lock.acquire()
+        global connectedClients
+        connectedClients -= 1
+        lock.release()
         return
     receivedData = client.recv(1024)
-    if not receivedData:
-        return  # Handle Error Better
     splitRec = receivedData.split(b'\r\n')
     for d in splitRec:
         if b'X-additional-wait:' in d:
             waitTime = int(d.split(b' ')[1])
             time.sleep(waitTime)
+    reqType = receivedData.split()[0].decode("utf-8")
+    if b'GET' not in reqType:
+        client.close()
+        lock.acquire()
+        global connectedClients
+        connectedClients -= 1
+        lock.release()
+        return
     filename = receivedData.split()[1].decode("utf-8")
     if ".." in filename or filename.count("/") > 1:
         client.send(errmsg.encode())
@@ -86,6 +96,7 @@ def handleConenction(client, address, lock):
         client.send(errmsg.encode())
         client.close()
         lock.acquire()
+        global connectedClients
         connectedClients -= 1
         lock.release()
         return
@@ -93,9 +104,9 @@ def handleConenction(client, address, lock):
     f.close()
     client.send(response10.encode())
     client.send(outputdata.encode())
-    # Send disconnect message
     client.close()
     lock.acquire()
+    global connectedClients
     connectedClients -= 1
     lock.release()
     logger.logMessage(Message(time.time(), "Disconnected from " + str(address)))
