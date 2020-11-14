@@ -46,16 +46,14 @@ class Logger:
         while self.logging:
             if not len(self.loggingQueue) == 0:
                 msg = self.loggingQueue.pop()
-                # Need to change message to include timestamp
                 timeStr = time.localtime(msg.curTime)
-                print(timeStr, msg.message, file=sys.stderr)
+                print(msg.message, file=sys.stderr)
 
     def stop(self):
         self.logging = False
         self.thread.join()
 
 
-# TODO Change messages to use logger
 def handleConenction(client, address, lock):
     lock.acquire()
     global connectedClients
@@ -63,6 +61,7 @@ def handleConenction(client, address, lock):
     lock.release()
     if connectedClients > maxConnections:
         client.close()
+        logger.logMessage(Message(time.time(), "Error: too many requests"))
         lock.acquire()
         connectedClients -= 1
         lock.release()
@@ -76,6 +75,7 @@ def handleConenction(client, address, lock):
     reqType = receivedData.split()[0].decode("utf-8")
     if 'GET' not in reqType:
         client.close()
+        logger.logMessage(Message(time.time(), "Error: invalid request line"))
         lock.acquire()
         connectedClients -= 1
         lock.release()
@@ -84,6 +84,7 @@ def handleConenction(client, address, lock):
     if ".." in filename or filename.count("/") > 1:
         client.send(errmsg.encode())
         client.close()
+        logger.logMessage(Message(time.time(), "Error: invalid path"))
         lock.acquire()
         connectedClients -= 1
         lock.release()
@@ -105,7 +106,7 @@ def handleConenction(client, address, lock):
     lock.acquire()
     connectedClients -= 1
     lock.release()
-    logger.logMessage(Message(time.time(), "Disconnected from " + str(address)))
+    logger.logMessage(Message(time.time(), "Success: served file " + filename))
 
 
 def startServer():
@@ -117,7 +118,7 @@ def startServer():
     try:
         while 1:
             newSocket, address = sock.accept()
-            logger.logMessage(Message(time.time(), "Information: received new connection from, " + address + ", port " + port))
+            logger.logMessage(Message(time.time(), "Information: received new connection from, " + str(address[0]) + ", port " + str(port)))
             thread = threading.Thread(target=handleConenction, args=[newSocket, address, lock])
             thread.start()
     finally:
