@@ -47,7 +47,7 @@ class Logger:
             if not len(self.loggingQueue) == 0:
                 msg = self.loggingQueue.pop()
                 # Need to change message to include timestamp
-                timeStr = time.strftime('[%Y-%m-%d %H:%M:%S]', time.localtime(msg.curTime))
+                timeStr = time.localtime(msg.curTime)
                 print(timeStr, msg.message, file=sys.stderr)
 
     def stop(self):
@@ -117,7 +117,7 @@ def startServer():
     try:
         while 1:
             newSocket, address = sock.accept()
-            logger.logMessage(Message(time.time(), "Information: received new connection from," ip,"port", port str(address)))
+            logger.logMessage(Message(time.time(), "Information: received new connection from, " + address + ", port " + port))
             thread = threading.Thread(target=handleConenction, args=[newSocket, address, lock])
             thread.start()
     finally:
