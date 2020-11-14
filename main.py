@@ -64,7 +64,6 @@ def handleConenction(client, address, lock):
     if connectedClients > maxConnections:
         client.close()
         lock.acquire()
-        global connectedClients
         connectedClients -= 1
         lock.release()
         return
@@ -75,10 +74,9 @@ def handleConenction(client, address, lock):
             waitTime = int(d.split(b' ')[1])
             time.sleep(waitTime)
     reqType = receivedData.split()[0].decode("utf-8")
-    if b'GET' not in reqType:
+    if 'GET' not in reqType:
         client.close()
         lock.acquire()
-        global connectedClients
         connectedClients -= 1
         lock.release()
         return
@@ -96,7 +94,6 @@ def handleConenction(client, address, lock):
         client.send(errmsg.encode())
         client.close()
         lock.acquire()
-        global connectedClients
         connectedClients -= 1
         lock.release()
         return
@@ -106,7 +103,6 @@ def handleConenction(client, address, lock):
     client.send(outputdata.encode())
     client.close()
     lock.acquire()
-    global connectedClients
     connectedClients -= 1
     lock.release()
     logger.logMessage(Message(time.time(), "Disconnected from " + str(address)))
@@ -121,7 +117,7 @@ def startServer():
     try:
         while 1:
             newSocket, address = sock.accept()
-            logger.logMessage(Message(time.time(), "Connection from " + str(address)))
+            logger.logMessage(Message(time.time(), "Information: received new connection from," ip,"port", port str(address)))
             thread = threading.Thread(target=handleConenction, args=[newSocket, address, lock])
             thread.start()
     finally:
