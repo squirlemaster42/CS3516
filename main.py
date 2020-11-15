@@ -59,54 +59,61 @@ def handleConenction(client, address, lock):
     global connectedClients
     connectedClients += 1
     lock.release()
-    if connectedClients > maxConnections:
-        client.close()
-        logger.logMessage(Message(time.time(), "Error: too many requests"))
-        lock.acquire()
-        connectedClients -= 1
-        lock.release()
-        return
-    receivedData = client.recv(1024)
-    splitRec = receivedData.split(b'\r\n')
-    for d in splitRec:
-        if b'X-additional-wait:' in d:
-            waitTime = int(d.split(b' ')[1])
-            time.sleep(waitTime)
-    reqType = receivedData.split()[0].decode("utf-8")
-    if 'GET' not in reqType:
-        client.close()
-        logger.logMessage(Message(time.time(), "Error: invalid request line"))
-        lock.acquire()
-        connectedClients -= 1
-        lock.release()
-        return
-    filename = receivedData.split()[1].decode("utf-8")
-    if ".." in filename or filename.count("/") > 1:
-        client.send(errmsg.encode())
-        client.close()
-        logger.logMessage(Message(time.time(), "Error: invalid path"))
-        lock.acquire()
-        connectedClients -= 1
-        lock.release()
-        return
     try:
-        f = open(filename[1:])
-    except FileNotFoundError:
-        client.send(errmsg.encode())
+        if connectedClients > maxConnections:
+            client.close()
+            logger.logMessage(Message(time.time(), "Error: too many requests"))
+            lock.acquire()
+            connectedClients -= 1
+            lock.release()
+            return
+        receivedData = client.recv(1024)
+        splitRec = receivedData.split(b'\r\n')
+        for d in splitRec:
+            if b'X-additional-wait:' in d:
+                waitTime = int(d.split(b' ')[1])
+                time.sleep(waitTime)
+        reqType = receivedData.split()[0].decode("utf-8")
+        if 'GET' not in reqType:
+            client.close()
+            logger.logMessage(Message(time.time(), "Error: invalid request line"))
+            lock.acquire()
+            connectedClients -= 1
+            lock.release()
+            return
+        filename = receivedData.split()[1].decode("utf-8")
+        if ".." in filename or filename.count("/") > 1:
+            client.send(errmsg.encode())
+            client.close()
+            logger.logMessage(Message(time.time(), "Error: invalid path"))
+            lock.acquire()
+            connectedClients -= 1
+            lock.release()
+            return
+        try:
+            f = open(filename[1:])
+        except FileNotFoundError:
+            client.send(errmsg.encode())
+            client.close()
+            lock.acquire()
+            connectedClients -= 1
+            lock.release()
+            return
+        outputdata = f.read()
+        f.close()
+        client.send(response10.encode())
+        client.send(outputdata.encode())
         client.close()
         lock.acquire()
         connectedClients -= 1
         lock.release()
-        return
-    outputdata = f.read()
-    f.close()
-    client.send(response10.encode())
-    client.send(outputdata.encode())
-    client.close()
-    lock.acquire()
-    connectedClients -= 1
-    lock.release()
-    logger.logMessage(Message(time.time(), "Success: served file " + filename))
+        logger.logMessage(Message(time.time(), "Success: served file " + filename))
+    except client.timeout:
+        logger.logMessage(Message(time.time(), "Error: socket recv timed out"))
+        client.close()
+        lock.acquire()
+        connectedClients -= 1
+        lock.release()
 
 
 def startServer():
@@ -118,6 +125,8 @@ def startServer():
     try:
         while 1:
             newSocket, address = sock.accept()
+            global timeout
+            newSocket.settimeout(timeout)
             logger.logMessage(Message(time.time(), "Information: received new connection from, " + str(address[0]) + ", port " + str(port)))
             thread = threading.Thread(target=handleConenction, args=[newSocket, address, lock])
             thread.start()
