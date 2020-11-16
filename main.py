@@ -67,13 +67,41 @@ def handleConenction(client, address, lock):
             connectedClients -= 1
             lock.release()
             return
+
         receivedData = client.recv(1024)
+
+        if not "/r/n/r/n" in receivedData:
+            logger.logMessage(Message(time.time(), "Error: unexpected end of input"))
+            client.close()
+            lock.acquire()
+            connectedClients -= 1
+            lock.release()
+            return
+
         splitRec = receivedData.split(b'\r\n')
         for d in splitRec:
             if b'X-additional-wait:' in d:
-                waitTime = int(d.split(b' ')[1])
+                try:
+                    waitTime = int(d.split(b' ')[1])
+                except:
+                    logger.logMessage(Message(time.time(), "Error: invalid headers"))
+                    client.close()
+                    lock.acquire()
+                    connectedClients -= 1
+                    lock.release()
+                    return
+
                 time.sleep(waitTime)
-        reqType = receivedData.split()[0].decode("utf-8")
+        try:
+            reqType = receivedData.split()[0].decode("utf-8")
+        except ValueError:
+            logger.logMessage(Message(time.time(), "Error: invalid input character"))
+            client.close()
+            lock.acquire()
+            connectedClients -= 1
+            lock.release()
+            return
+
         if 'GET' not in reqType:
             client.close()
             logger.logMessage(Message(time.time(), "Error: invalid request line"))
@@ -81,7 +109,16 @@ def handleConenction(client, address, lock):
             connectedClients -= 1
             lock.release()
             return
-        filename = receivedData.split()[1].decode("utf-8")
+        try:
+            filename = receivedData.split()[1].decode("utf-8")
+        except ValueError:
+            logger.logMessage(Message(time.time(), "Error: invalid input character"))
+            client.close()
+            lock.acquire()
+            connectedClients -= 1
+            lock.release()
+            return
+
         if ".." in filename or filename.count("/") > 1:
             client.send(errmsg.encode())
             client.close()
@@ -90,6 +127,7 @@ def handleConenction(client, address, lock):
             connectedClients -= 1
             lock.release()
             return
+
         try:
             f = open(filename[1:])
         except FileNotFoundError:
@@ -99,6 +137,7 @@ def handleConenction(client, address, lock):
             connectedClients -= 1
             lock.release()
             return
+
         outputdata = f.read()
         f.close()
         client.send(response10.encode())
@@ -108,6 +147,7 @@ def handleConenction(client, address, lock):
         connectedClients -= 1
         lock.release()
         logger.logMessage(Message(time.time(), "Success: served file " + filename))
+
     except client.timeout:
         logger.logMessage(Message(time.time(), "Error: socket recv timed out"))
         client.close()
