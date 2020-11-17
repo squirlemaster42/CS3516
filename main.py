@@ -36,7 +36,7 @@ class Logger:
                 self.loggingQueue.append(message)
                 return
             for i in range(len(self.loggingQueue)):
-                if message.time < self.loggingQueue[i]:
+                if message.curTime < self.loggingQueue[i].curTime:
                     self.loggingQueue.insert(i, message)
                     break
 
@@ -70,7 +70,10 @@ def handleConenction(client, address, lock):
 
         receivedData = client.recv(1024)
 
-        if not "/r/n/r/n" in receivedData:
+        if not receivedData.find(b'\r\n\r\n') >= 1:
+            print(receivedData.find(b'\r\n\r\n'))
+            print(receivedData)
+            print(receivedData.decode("utf-8"))
             logger.logMessage(Message(time.time(), "Error: unexpected end of input"))
             client.close()
             lock.acquire()
@@ -148,7 +151,7 @@ def handleConenction(client, address, lock):
         lock.release()
         logger.logMessage(Message(time.time(), "Success: served file " + filename))
 
-    except client.timeout:
+    except socket.timeout:
         logger.logMessage(Message(time.time(), "Error: socket recv timed out"))
         client.close()
         lock.acquire()
