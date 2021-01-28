@@ -1,8 +1,0 @@
-Jakob Misbach
-jmisbach@wpi.edu
-
-1. There were 60 packets captured over 9.198384 seconds.
-2. The protocols are DNS, TCP, SMTP, ICMP, SMTP/IMF, BROWSER.
-3. The email is from gurpartap@patriots.in.
-4. The email appears to contain information about a change log for some product used for creating code.
-For example, one of the changes noted is "Enable use of processor in functions..."
