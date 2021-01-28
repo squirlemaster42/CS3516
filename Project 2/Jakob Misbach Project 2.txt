@@ -1,0 +1,19 @@
+Jakob Misbach
+jmisbach@wpi.edu
+
+1. The five layers are Frame 1, Ethernet II, Internet Protocol Version 4,
+User Diagram Protocol, and Domain Name System.
+2. The data-link layer protocol is Ethernet II.
+3. The network-layer protocol is Internet Protocol Verison 4.
+4. The transport-layer protocols are User Diagram Protocol, and Transmission Control
+Protocol.
+5. The application-layer protocols are Domain Name System, and
+Simple Mail Transfer Protocol.
+6. There are five layers because the internet model is being used. Since we do not 
+need things like encryption and compression, we do not need the presentation or session
+layers. The role of the data-link layer is to provide a transfer of information to/from 
+the physical layer, and provides needed synchronization, flow control and error control. 
+The role of the network-layer to establish, manage and terminate connections. The role 
+of the transport-layer is to provide a transfer of data between two end points. The role
+of the application layer is to provide access to the other layers and facilitate gettings
+data ready to be moved.
